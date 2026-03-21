@@ -1,4 +1,5 @@
 const Anthropic = require('@anthropic-ai/sdk');
+const { getAnthropicMessageText } = require('../lib/anthropicText');
 
 const client = process.env.ANTHROPIC_API_KEY
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -51,12 +52,18 @@ Include one object per article index i in the same order as provided.`;
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const text = message.content[0].text.trim();
+    const text = getAnthropicMessageText(message);
+    if (!text) throw new Error('Empty Claude response');
     const jsonStr = extractJsonArray(text);
     const parsed = JSON.parse(jsonStr);
     if (!Array.isArray(parsed)) throw new Error('Expected array');
 
-    const byIndex = new Map(parsed.map((row) => [row.i, normalizeBullets(row.bullets)]));
+    const byIndex = new Map();
+    for (const row of parsed) {
+      const idx = row?.i !== undefined && row?.i !== null ? Number(row.i) : Number(row?.index);
+      if (!Number.isInteger(idx) || idx < 0) continue;
+      byIndex.set(idx, normalizeBullets(row.bullets));
+    }
     return articles.map((a, i) => ({
       ...a,
       bullets: byIndex.get(i)?.length ? byIndex.get(i) : fallbackBullets(a),

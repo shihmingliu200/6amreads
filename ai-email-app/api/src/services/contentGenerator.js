@@ -1,4 +1,5 @@
 const Anthropic = require('@anthropic-ai/sdk');
+const { getAnthropicMessageText } = require('../lib/anthropicText');
 
 const client = process.env.ANTHROPIC_API_KEY
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -41,7 +42,11 @@ Rules:
     messages: [{ role: 'user', content: prompt }],
   });
 
-  return message.content[0].text.trim();
+  const text = getAnthropicMessageText(message);
+  if (!text) {
+    throw new Error('Empty response from Claude');
+  }
+  return text;
 }
 
 module.exports = { generateLesson };

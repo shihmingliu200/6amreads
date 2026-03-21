@@ -35,6 +35,10 @@ async function fetchMorningNewsPool() {
  */
 async function fetchNews(profile) {
   const apiKey = process.env.NEWS_API_KEY;
+  if (!apiKey) {
+    console.warn('[news] NEWS_API_KEY not set.');
+    return [];
+  }
   const keywords = buildSearchQuery(profile);
   const articles =
     (keywords && (await fetchEverything(keywords, apiKey))) ||
@@ -155,11 +159,11 @@ function buildSearchQuery(profile) {
 }
 
 function fetchTopHeadlines(apiKey, country, pageSize) {
+  // Omit category — with some keys/regions, category=general returns empty while bare country works.
   const params = new URLSearchParams({
     apiKey,
     country,
     pageSize: String(pageSize),
-    category: 'general',
   });
   return requestNews(`/v2/top-headlines?${params}`);
 }

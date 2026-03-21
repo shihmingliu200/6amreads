@@ -84,6 +84,7 @@ psql "$DATABASE_URL" -f api/migrations/002_user_prefs_engagement.sql
 
 ```bash
 psql $DATABASE_URL -f api/migrations/001_init.sql
+psql $DATABASE_URL -f api/migrations/002_user_prefs_engagement.sql
 ```
 
 ### 2. Start the API

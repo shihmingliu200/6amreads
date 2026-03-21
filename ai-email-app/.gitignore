@@ -1,5 +1,18 @@
+# Dependencies
 node_modules/
-web/node_modules/
-api/node_modules/
-node_modules
-*/node_modules
+*/node_modules/
+
+# Build output
+web/.next/
+web/.netlify/
+
+# Env files
+.env
+.env.local
+api/.env
+web/.env.local
+
+# Misc
+.DS_Store
+web/.DS_Store
+*.log

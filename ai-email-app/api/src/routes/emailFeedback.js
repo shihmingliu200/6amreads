@@ -33,7 +33,7 @@ async function handleEmailFeedback(req, res) {
         ? `[Email ${dayYmd}] One-tap: More content like today’s edition.`
         : `[Email ${dayYmd}] One-tap: Less content like today’s edition.`;
 
-    await query(
+    const upd = await query(
       `UPDATE profiles
        SET feedback_prefs = CASE
          WHEN feedback_prefs IS NULL OR feedback_prefs = '' THEN $2
@@ -43,6 +43,17 @@ async function handleEmailFeedback(req, res) {
        WHERE user_id = $1`,
       [userId, line]
     );
+
+    if (upd.rowCount === 0) {
+      return res
+        .status(404)
+        .send(
+          htmlPage(
+            'Profile not found',
+            'We could not find a reader profile for this account. Complete onboarding on 6amreads.com first.'
+          )
+        );
+    }
 
     const appUrl = process.env.APP_URL || 'https://6amreads.com';
     return res

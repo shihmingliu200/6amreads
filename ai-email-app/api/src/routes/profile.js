@@ -12,11 +12,12 @@ router.post('/onboarding', requireAuth, async (req, res) => {
   const { age, hobbies, position, goal_5yr, goal_10yr, main_goal, about_me } = req.body;
   const userId = req.user.id;
 
-  if (!age || !hobbies || !position || !goal_5yr || !goal_10yr || !main_goal || !about_me) {
+  if (age === undefined || age === null || !hobbies || !position || !goal_5yr || !goal_10yr || !main_goal || !about_me) {
     return res.status(400).json({ error: 'All 7 onboarding fields are required.' });
   }
-  if (typeof age !== 'number' || age < 1 || age > 120) {
-    return res.status(400).json({ error: 'Age must be a valid number.' });
+  const ageNum = typeof age === 'number' ? age : Number(age);
+  if (!Number.isFinite(ageNum) || ageNum < 1 || ageNum > 120) {
+    return res.status(400).json({ error: 'Age must be a valid number between 1 and 120.' });
   }
 
   try {
@@ -34,7 +35,7 @@ router.post('/onboarding', requireAuth, async (req, res) => {
          about_me = EXCLUDED.about_me,
          updated_at = NOW()
        RETURNING *`,
-      [userId, age, hobbies, position, goal_5yr, goal_10yr, main_goal, about_me]
+      [userId, ageNum, hobbies, position, goal_5yr, goal_10yr, main_goal, about_me]
     );
 
     return res.status(200).json({ profile: result.rows[0] });

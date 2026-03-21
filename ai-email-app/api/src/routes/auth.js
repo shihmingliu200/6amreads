@@ -7,7 +7,11 @@ const { query } = require('../db');
 const router = express.Router();
 
 function signUserToken(user) {
-  return jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET is not configured');
+  }
+  return jwt.sign({ id: user.id, email: user.email }, secret, { expiresIn: '7d' });
 }
 
 /**
@@ -17,6 +21,10 @@ function signUserToken(user) {
  */
 router.post('/signup', async (req, res) => {
   const { email, password } = req.body;
+
+  if (!process.env.JWT_SECRET) {
+    return res.status(500).json({ error: 'Server misconfiguration: JWT_SECRET is not set.' });
+  }
 
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required.' });
@@ -42,7 +50,13 @@ router.post('/signup', async (req, res) => {
     );
 
     const user = result.rows[0];
-    const token = signUserToken(user);
+    let token;
+    try {
+      token = signUserToken(user);
+    } catch (e) {
+      console.error('Signup token error:', e);
+      return res.status(500).json({ error: 'Server misconfiguration.' });
+    }
 
     return res.status(201).json({ token, user: { id: user.id, email: user.email } });
   } catch (err) {
@@ -58,6 +72,10 @@ router.post('/signup', async (req, res) => {
  */
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
+
+  if (!process.env.JWT_SECRET) {
+    return res.status(500).json({ error: 'Server misconfiguration: JWT_SECRET is not set.' });
+  }
 
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required.' });
@@ -82,7 +100,13 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
-    const token = signUserToken(user);
+    let token;
+    try {
+      token = signUserToken(user);
+    } catch (e) {
+      console.error('Login token error:', e);
+      return res.status(500).json({ error: 'Server misconfiguration.' });
+    }
 
     return res.status(200).json({ token, user: { id: user.id, email: user.email } });
   } catch (err) {
@@ -113,8 +137,12 @@ router.post('/google', async (req, res) => {
     const client = new OAuth2Client(clientId);
     const ticket = await client.verifyIdToken({ idToken: credential, audience: clientId });
     const payload = ticket.getPayload();
-    if (!payload?.email || !payload.email_verified) {
-      return res.status(401).json({ error: 'Google account email could not be verified.' });
+    if (!payload?.email) {
+      return res.status(401).json({ error: 'Google account did not return an email.' });
+    }
+    // Some Workspace accounts omit email_verified; reject only when Google explicitly says false.
+    if (payload.email_verified === false) {
+      return res.status(401).json({ error: 'Google account email is not verified.' });
     }
 
     const email = payload.email.toLowerCase();
@@ -143,7 +171,13 @@ router.post('/google', async (req, res) => {
       user = ins.rows[0];
     }
 
-    const token = signUserToken(user);
+    let token;
+    try {
+      token = signUserToken(user);
+    } catch (e) {
+      console.error('Google token error:', e);
+      return res.status(500).json({ error: 'Server misconfiguration.' });
+    }
     return res.status(200).json({ token, user: { id: user.id, email: user.email } });
   } catch (err) {
     console.error('Google auth error:', err);
