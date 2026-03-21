@@ -4,6 +4,9 @@ const cors = require('cors');
 
 const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
+const adminRoutes = require('./routes/admin');
+const { handleEmailFeedback } = require('./routes/emailFeedback');
+const { scheduleDailyEmail } = require('./cron/dailyEmail');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -20,6 +23,8 @@ app.get('/health', (req, res) => {
 // Routes
 app.use('/auth', authRoutes);
 app.use('/profile', profileRoutes);
+app.use('/admin', adminRoutes);
+app.get('/public/email-feedback', handleEmailFeedback);
 
 // 404 handler
 app.use((req, res) => {
@@ -34,4 +39,5 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`AI Email App API running on port ${PORT}`);
+  scheduleDailyEmail();
 });

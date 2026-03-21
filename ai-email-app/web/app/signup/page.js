@@ -1,8 +1,12 @@
 'use client';
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import Link from 'next/link';
+import Logo from '@/components/Logo';
+import GoogleSignInButton from '@/components/GoogleSignInButton';
+import { API_URL } from '@/lib/api';
+import { postGoogleCredential, redirectAfterAuth } from '@/lib/authRedirect';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -32,65 +36,103 @@ export default function SignupPage() {
 
       localStorage.setItem('token', data.token);
       router.push('/onboarding');
-    } catch (err) {
+    } catch {
       setError('Could not connect to server. Is the API running?');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleGoogle = async (cred) => {
+    setError('');
+    setLoading(true);
+    try {
+      const data = await postGoogleCredential(cred.credential);
+      localStorage.setItem('token', data.token);
+      await redirectAfterAuth(router);
+    } catch (err) {
+      setError(err.message || 'Google sign-in failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <main style={{ fontFamily: 'sans-serif', maxWidth: '400px', margin: '80px auto', padding: '0 24px' }}>
-      <h1 style={{ marginBottom: '8px' }}>Create your account</h1>
-      <p style={{ color: '#555', marginBottom: '32px' }}>Start receiving your personalized morning email.</p>
+    <div className="min-h-screen bg-cream-50 px-6 py-12">
+      <div className="mx-auto w-full max-w-md">
+        <Link href="/" className="inline-block">
+          <Logo />
+        </Link>
+        <h1 className="mt-10 font-serif text-3xl font-semibold text-ink-900">Create your account</h1>
+        <p className="mt-2 text-sm text-ink-700">Start your personalized morning newspaper.</p>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <input
-          name="email"
-          type="email"
-          placeholder="Email address"
-          value={form.email}
-          onChange={handleChange}
-          required
-          style={inputStyle}
-        />
-        <input
-          name="password"
-          type="password"
-          placeholder="Password (min 8 characters)"
-          value={form.password}
-          onChange={handleChange}
-          required
-          style={inputStyle}
-        />
-        {error && <p style={{ color: 'red', margin: 0 }}>{error}</p>}
-        <button type="submit" disabled={loading} style={buttonStyle}>
-          {loading ? 'Creating account...' : 'Sign Up'}
-        </button>
-      </form>
+        <div className="mt-8 space-y-6">
+          <GoogleSignInButton
+            onSuccess={handleGoogle}
+            onError={() => setError('Google sign-in was cancelled or failed.')}
+            disabled={loading}
+          />
 
-      <p style={{ marginTop: '24px', color: '#555' }}>
-        Already have an account? <a href="/login">Log in</a>
-      </p>
-    </main>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-cream-300" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase tracking-wider">
+              <span className="bg-cream-50 px-3 text-ink-700">or email</span>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-xs font-medium uppercase tracking-wider text-ink-700">
+                Email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                value={form.email}
+                onChange={handleChange}
+                required
+                className="mt-1.5 w-full rounded-lg border border-cream-300 bg-white px-4 py-3 text-ink-900 outline-none ring-accent/30 transition focus:border-accent focus:ring-2"
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="block text-xs font-medium uppercase tracking-wider text-ink-700">
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                placeholder="At least 8 characters"
+                value={form.password}
+                onChange={handleChange}
+                required
+                minLength={8}
+                className="mt-1.5 w-full rounded-lg border border-cream-300 bg-white px-4 py-3 text-ink-900 outline-none ring-accent/30 transition focus:border-accent focus:ring-2"
+              />
+            </div>
+            {error && <p className="text-sm text-red-700">{error}</p>}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-full bg-ink-900 py-3.5 text-sm font-semibold text-cream-50 transition hover:bg-ink-800 disabled:opacity-60"
+            >
+              {loading ? 'Please wait…' : 'Sign up'}
+            </button>
+          </form>
+
+          <p className="text-center text-sm text-ink-700">
+            Already have an account?{' '}
+            <Link href="/login" className="font-semibold text-accent hover:text-accent-hover">
+              Log in
+            </Link>
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
-
-const inputStyle = {
-  padding: '12px 14px',
-  fontSize: '1rem',
-  border: '1px solid #ddd',
-  borderRadius: '6px',
-  outline: 'none',
-};
-
-const buttonStyle = {
-  padding: '12px',
-  background: '#1a1a1a',
-  color: '#fff',
-  border: 'none',
-  borderRadius: '6px',
-  fontSize: '1rem',
-  fontWeight: '600',
-  cursor: 'pointer',
-};

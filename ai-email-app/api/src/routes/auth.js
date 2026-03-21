@@ -1,9 +1,14 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
 const { query } = require('../db');
 
 const router = express.Router();
+
+function signUserToken(user) {
+  return jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
+}
 
 /**
  * POST /auth/signup
@@ -37,11 +42,7 @@ router.post('/signup', async (req, res) => {
     );
 
     const user = result.rows[0];
-    const token = jwt.sign(
-      { id: user.id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = signUserToken(user);
 
     return res.status(201).json({ token, user: { id: user.id, email: user.email } });
   } catch (err) {
@@ -73,21 +74,80 @@ router.post('/login', async (req, res) => {
     }
 
     const user = result.rows[0];
+    if (!user.password_hash) {
+      return res.status(401).json({ error: 'This account uses Google sign-in.' });
+    }
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
-    const token = jwt.sign(
-      { id: user.id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = signUserToken(user);
 
     return res.status(200).json({ token, user: { id: user.id, email: user.email } });
   } catch (err) {
     console.error('Login error:', err);
     return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+/**
+ * POST /auth/google
+ * Body: { credential } — Google ID token (JWT) from Sign-In button
+ */
+router.post('/google', async (req, res) => {
+  const { credential } = req.body;
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+
+  if (!credential) {
+    return res.status(400).json({ error: 'Google credential is required.' });
+  }
+  if (!clientId) {
+    return res.status(503).json({ error: 'Google sign-in is not configured on the server.' });
+  }
+  if (!process.env.JWT_SECRET) {
+    return res.status(500).json({ error: 'Server misconfiguration.' });
+  }
+
+  try {
+    const client = new OAuth2Client(clientId);
+    const ticket = await client.verifyIdToken({ idToken: credential, audience: clientId });
+    const payload = ticket.getPayload();
+    if (!payload?.email || !payload.email_verified) {
+      return res.status(401).json({ error: 'Google account email could not be verified.' });
+    }
+
+    const email = payload.email.toLowerCase();
+    const sub = payload.sub;
+
+    let userRow = await query('SELECT id, email, google_sub, password_hash FROM users WHERE google_sub = $1', [sub]);
+    let user = userRow.rows[0];
+
+    if (!user) {
+      userRow = await query('SELECT id, email, google_sub, password_hash FROM users WHERE email = $1', [email]);
+      user = userRow.rows[0];
+      if (user) {
+        if (user.google_sub && user.google_sub !== sub) {
+          return res.status(409).json({ error: 'This email is linked to a different Google account.' });
+        }
+        await query('UPDATE users SET google_sub = $1 WHERE id = $2', [sub, user.id]);
+        user.google_sub = sub;
+      }
+    }
+
+    if (!user) {
+      const ins = await query(
+        'INSERT INTO users (email, password_hash, google_sub) VALUES ($1, NULL, $2) RETURNING id, email',
+        [email, sub]
+      );
+      user = ins.rows[0];
+    }
+
+    const token = signUserToken(user);
+    return res.status(200).json({ token, user: { id: user.id, email: user.email } });
+  } catch (err) {
+    console.error('Google auth error:', err);
+    return res.status(401).json({ error: 'Could not verify Google sign-in.' });
   }
 });
 

@@ -1,11 +1,14 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
+const connString = process.env.DATABASE_URL;
+const useSSL =
+  connString &&
+  (connString.includes('railway') || connString.includes('supabase.com'));
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('railway')
-    ? { rejectUnauthorized: false }
-    : false,
+  connectionString: connString,
+  ssl: useSSL ? { rejectUnauthorized: false } : false,
 });
 
 /**
