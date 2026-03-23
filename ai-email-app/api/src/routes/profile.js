@@ -1,15 +1,16 @@
 const express = require('express');
 const { query } = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const { isValidLanguage } = require('../lib/languages');
 
 const router = express.Router();
 
 /**
  * POST /profile/onboarding
- * Body: { age, hobbies, position, goal_5yr, goal_10yr, main_goal, about_me }
+ * Body: { age, hobbies, position, goal_5yr, goal_10yr, main_goal, about_me, language? }
  */
 router.post('/onboarding', requireAuth, async (req, res) => {
-  const { age, hobbies, position, goal_5yr, goal_10yr, main_goal, about_me } = req.body;
+  const { age, hobbies, position, goal_5yr, goal_10yr, main_goal, about_me, language } = req.body;
   const userId = req.user.id;
 
   if (age === undefined || age === null || !hobbies || !position || !goal_5yr || !goal_10yr || !main_goal || !about_me) {
@@ -38,6 +39,10 @@ router.post('/onboarding', requireAuth, async (req, res) => {
       [userId, ageNum, hobbies, position, goal_5yr, goal_10yr, main_goal, about_me]
     );
 
+    if (language && isValidLanguage(language)) {
+      await query('UPDATE users SET language = $1 WHERE id = $2', [language, userId]);
+    }
+
     return res.status(200).json({ profile: result.rows[0] });
   } catch (err) {
     console.error('Onboarding error:', err);
@@ -54,7 +59,7 @@ router.get('/', requireAuth, async (req, res) => {
   try {
     const result = await query(
       `SELECT
-         u.id, u.email, u.timezone, u.created_at, u.paused, u.delivery_hour,
+         u.id, u.email, u.timezone, u.created_at, u.paused, u.delivery_hour, u.language,
          p.age, p.hobbies, p.position, p.goal_5yr, p.goal_10yr,
          p.main_goal, p.about_me, p.feedback_prefs, p.updated_at AS profile_updated_at
        FROM users u
@@ -67,7 +72,9 @@ router.get('/', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'User not found.' });
     }
 
-    return res.status(200).json({ profile: result.rows[0] });
+    const profile = result.rows[0];
+    if (!profile.language) profile.language = 'en';
+    return res.status(200).json({ profile });
   } catch (err) {
     console.error('Get profile error:', err);
     return res.status(500).json({ error: 'Internal server error.' });
@@ -84,6 +91,7 @@ router.patch('/', requireAuth, async (req, res) => {
     timezone,
     paused,
     delivery_hour,
+    language,
     age,
     hobbies,
     position,
@@ -116,6 +124,13 @@ router.patch('/', requireAuth, async (req, res) => {
       }
       userFields.push(`delivery_hour = $${i++}`);
       userValues.push(h);
+    }
+    if (language !== undefined) {
+      if (!isValidLanguage(language)) {
+        return res.status(400).json({ error: 'Invalid language code.' });
+      }
+      userFields.push(`language = $${i++}`);
+      userValues.push(language);
     }
 
     if (userFields.length > 0) {
@@ -181,7 +196,7 @@ router.patch('/', requireAuth, async (req, res) => {
 
     const result = await query(
       `SELECT
-         u.id, u.email, u.timezone, u.created_at, u.paused, u.delivery_hour,
+         u.id, u.email, u.timezone, u.created_at, u.paused, u.delivery_hour, u.language,
          p.age, p.hobbies, p.position, p.goal_5yr, p.goal_10yr,
          p.main_goal, p.about_me, p.feedback_prefs, p.updated_at AS profile_updated_at
        FROM users u
@@ -190,7 +205,9 @@ router.patch('/', requireAuth, async (req, res) => {
       [userId]
     );
 
-    return res.status(200).json({ profile: result.rows[0] });
+    const profile = result.rows[0];
+    if (profile && !profile.language) profile.language = 'en';
+    return res.status(200).json({ profile: profile });
   } catch (err) {
     console.error('Patch profile error:', err);
     return res.status(500).json({ error: 'Internal server error.' });

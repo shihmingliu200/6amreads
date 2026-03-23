@@ -1,5 +1,6 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const { getAnthropicMessageText } = require('../lib/anthropicText');
+const { toClaudeLanguage } = require('../lib/languages');
 
 const client = process.env.ANTHROPIC_API_KEY
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -10,9 +11,10 @@ const MODEL = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
 /**
  * Summarize each article into 2–3 neutral bullet points (Claude).
  * @param {Array<{title: string, description: string, url: string, source: string}>} articles
+ * @param {string} [languageCode='en'] - Output language for bullets
  * @returns {Promise<Array<{title: string, description: string, url: string, source: string, bullets: string[]}>>}
  */
-async function summarizeArticlesAsBullets(articles) {
+async function summarizeArticlesAsBullets(articles, languageCode = 'en') {
   if (!articles.length) return [];
 
   if (!client) {
@@ -30,7 +32,10 @@ async function summarizeArticlesAsBullets(articles) {
     source: a.source,
   }));
 
+  const langLabel = toClaudeLanguage(languageCode);
   const prompt = `You are a careful news editor. For EACH article below, write exactly 2 or 3 bullet points.
+
+IMPORTANT: Write ALL bullet points in ${langLabel}. Do not mix languages.
 
 Rules:
 - Neutral, factual tone — no opinions, no hype, no moralizing

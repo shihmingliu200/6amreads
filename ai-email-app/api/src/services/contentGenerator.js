@@ -1,5 +1,6 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const { getAnthropicMessageText } = require('../lib/anthropicText');
+const { toClaudeLanguage } = require('../lib/languages');
 
 const client = process.env.ANTHROPIC_API_KEY
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -17,7 +18,10 @@ async function generateLesson(profile) {
     return `Good morning. Your personalized lesson will appear here once ANTHROPIC_API_KEY is configured. Your focus today: ${profile.main_goal || 'keep showing up consistently'}. Take one small step toward that goal before noon.`;
   }
 
-  const prompt = `You are a personal growth and learning coach. Write a 300–400 word personalized daily lesson for this person:
+  const langLabel = toClaudeLanguage(profile.language || 'en');
+  const prompt = `You are a personal growth and learning coach. Write a 300–400 word personalized daily lesson for this person.
+
+IMPORTANT: Write the ENTIRE lesson in ${langLabel}. Do not mix languages.
 
 - Age: ${profile.age}
 - Hobbies: ${profile.hobbies}

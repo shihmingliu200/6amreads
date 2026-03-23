@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Logo from '@/components/Logo';
 import NewspaperPreview from '@/components/NewspaperPreview';
+import LanguagePicker from '@/components/LanguagePicker';
 import { API_URL, getToken, clearToken, onboardingComplete } from '@/lib/api';
 
 function formatHour(h) {
@@ -44,6 +45,7 @@ export default function DashboardPage() {
   });
   const [timezone, setTimezone] = useState('UTC');
   const [deliveryHour, setDeliveryHour] = useState(6);
+  const [language, setLanguage] = useState('en');
   const [paused, setPaused] = useState(false);
   const [feedbackMore, setFeedbackMore] = useState('');
   const [feedbackLess, setFeedbackLess] = useState('');
@@ -82,6 +84,7 @@ export default function DashboardPage() {
       });
       setTimezone(p.timezone || 'UTC');
       setDeliveryHour(p.delivery_hour != null ? Number(p.delivery_hour) : 6);
+      setLanguage(p.language || 'en');
       setPaused(Boolean(p.paused));
       const fb = parseFeedbackPrefs(p.feedback_prefs);
       setFeedbackMore(fb.more);
@@ -260,9 +263,20 @@ export default function DashboardPage() {
           <h2 className="font-serif text-xl font-semibold text-ink-900">Email preferences</h2>
           <p className="mt-2 text-sm text-ink-700">
             Delivery time uses your timezone setting (IANA name, e.g. <code className="rounded bg-cream-100 px-1">America/New_York</code>
-            ).
+            ). Your language affects lesson content, news summaries, and email labels.
           </p>
           <div className="mt-6 grid gap-6 md:grid-cols-2">
+            <label className="block">
+              <span className="text-xs font-medium uppercase tracking-wider text-ink-700">Language</span>
+              <div className="mt-1.5">
+                <LanguagePicker
+                  value={language}
+                  onChange={setLanguage}
+                  disabled={saving}
+                  className="w-full rounded-lg border border-cream-300 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                />
+              </div>
+            </label>
             <label className="block">
               <span className="text-xs font-medium uppercase tracking-wider text-ink-700">Delivery hour (local)</span>
               <select
@@ -290,7 +304,7 @@ export default function DashboardPage() {
           <button
             type="button"
             disabled={saving}
-            onClick={() => patch({ delivery_hour: deliveryHour, timezone })}
+            onClick={() => patch({ delivery_hour: deliveryHour, timezone, language })}
             className="mt-6 rounded-full bg-ink-900 px-6 py-2.5 text-sm font-semibold text-cream-50 hover:bg-ink-800 disabled:opacity-50"
           >
             Save email preferences

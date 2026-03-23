@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { API_URL } from '@/lib/api';
+import LanguagePicker from '@/components/LanguagePicker';
 
 function getAdminKey() {
   if (typeof window === 'undefined') return null;
@@ -40,6 +41,7 @@ export default function MemberDetailPage() {
           timezone: m.timezone || 'UTC',
           paused: Boolean(m.paused),
           delivery_hour: m.delivery_hour != null ? m.delivery_hour : 6,
+          language: m.language || 'en',
           age: m.age ?? '',
           hobbies: m.hobbies ?? '',
           position: m.position ?? '',
@@ -83,6 +85,7 @@ export default function MemberDetailPage() {
           timezone: form.timezone,
           paused: form.paused,
           delivery_hour: Number(form.delivery_hour),
+          language: form.language || 'en',
           age: Number(form.age),
           hobbies: form.hobbies,
           position: form.position,
@@ -173,6 +176,7 @@ export default function MemberDetailPage() {
 
         <section className="mt-10 space-y-6 rounded-xl border border-zinc-800 bg-zinc-950 p-6">
           {[
+            ['Language', member.language || 'en'],
             ['Age', member.age],
             ['Hobbies', member.hobbies],
             ['Position', member.position],
@@ -228,6 +232,7 @@ export default function MemberDetailPage() {
                 ['email', 'Email', 'email'],
                 ['timezone', 'Timezone', 'text'],
                 ['delivery_hour', 'Delivery hour (0–23)', 'number'],
+                ['language', 'Language', 'language'],
                 ['age', 'Age', 'number'],
                 ['hobbies', 'Hobbies', 'text'],
                 ['position', 'Position', 'text'],
@@ -239,7 +244,15 @@ export default function MemberDetailPage() {
               ].map(([name, label, kind]) => (
                 <label key={name} className="block">
                   <span className="text-xs text-zinc-500">{label}</span>
-                  {kind === 'textarea' ? (
+                  {kind === 'language' ? (
+                    <div className="mt-1">
+                      <LanguagePicker
+                        value={form[name] ?? 'en'}
+                        onChange={(v) => setForm({ ...form, [name]: v })}
+                        className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+                      />
+                    </div>
+                  ) : kind === 'textarea' ? (
                     <textarea
                       name={name}
                       rows={2}

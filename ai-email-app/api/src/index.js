@@ -20,6 +20,12 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Public: list supported languages
+const { LANGUAGES } = require('./lib/languages');
+app.get('/languages', (req, res) => {
+  res.json({ languages: LANGUAGES });
+});
+
 // Routes
 app.use('/auth', authRoutes);
 app.use('/profile', profileRoutes);

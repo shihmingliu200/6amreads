@@ -40,7 +40,8 @@ async function processUser(user, newsPool) {
         ? selectArticlesForUser(newsPool, user, 5)
         : await fetchNews(user);
 
-    const newsItems = await summarizeArticlesAsBullets(articles);
+    const language = user.language || 'en';
+    const newsItems = await summarizeArticlesAsBullets(articles, language);
     const lesson = await generateLesson(user);
     const displayName = displayNameFromEmail(user.email);
 
@@ -50,6 +51,7 @@ async function processUser(user, newsPool) {
       userId: user.id,
       lesson,
       newsItems,
+      language,
     });
 
     const contentHash = Buffer.from(lesson.slice(0, 100)).toString('base64');
@@ -78,7 +80,7 @@ async function runDailyEmailJob() {
 
     const result = await query(`
       SELECT
-        u.id, u.email, u.timezone, u.delivery_hour,
+        u.id, u.email, u.timezone, u.delivery_hour, u.language,
         p.age, p.hobbies, p.position,
         p.goal_5yr, p.goal_10yr, p.main_goal,
         p.about_me, p.feedback_prefs

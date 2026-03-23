@@ -1,6 +1,7 @@
 const express = require('express');
 const { query } = require('../db');
 const { requireAdmin } = require('../middleware/admin');
+const { isValidLanguage } = require('../lib/languages');
 const { runDailyEmailJob, getCronStatus } = require('../cron/dailyEmail');
 
 const router = express.Router();
@@ -14,7 +15,7 @@ router.get('/members', async (req, res) => {
   try {
     const result = await query(
       `SELECT
-         u.id, u.email, u.timezone, u.created_at, u.paused, u.delivery_hour, u.google_sub,
+         u.id, u.email, u.timezone, u.created_at, u.paused, u.delivery_hour, u.language, u.google_sub,
          p.age, p.hobbies, p.position, p.goal_5yr, p.goal_10yr,
          p.main_goal, p.about_me, p.updated_at AS profile_updated_at
        FROM users u
@@ -38,7 +39,7 @@ router.get('/members/:id', async (req, res) => {
   try {
     const userResult = await query(
       `SELECT
-         u.id, u.email, u.timezone, u.created_at, u.paused, u.delivery_hour, u.google_sub,
+         u.id, u.email, u.timezone, u.created_at, u.paused, u.delivery_hour, u.language, u.google_sub,
          p.age, p.hobbies, p.position, p.goal_5yr, p.goal_10yr,
          p.main_goal, p.about_me, p.feedback_prefs, p.updated_at AS profile_updated_at
        FROM users u
@@ -80,6 +81,7 @@ router.patch('/members/:id', async (req, res) => {
     timezone,
     paused,
     delivery_hour,
+    language,
     age,
     hobbies,
     position,
@@ -122,6 +124,13 @@ router.patch('/members/:id', async (req, res) => {
       }
       userFields.push(`delivery_hour = $${i++}`);
       userVals.push(h);
+    }
+    if (language !== undefined) {
+      if (!isValidLanguage(language)) {
+        return res.status(400).json({ error: 'Invalid language code.' });
+      }
+      userFields.push(`language = $${i++}`);
+      userVals.push(language);
     }
 
     if (userFields.length > 0) {
@@ -171,7 +180,7 @@ router.patch('/members/:id', async (req, res) => {
 
     const userResult = await query(
       `SELECT
-         u.id, u.email, u.timezone, u.created_at, u.paused, u.delivery_hour, u.google_sub,
+         u.id, u.email, u.timezone, u.created_at, u.paused, u.delivery_hour, u.language, u.google_sub,
          p.age, p.hobbies, p.position, p.goal_5yr, p.goal_10yr,
          p.main_goal, p.about_me, p.feedback_prefs, p.updated_at AS profile_updated_at
        FROM users u

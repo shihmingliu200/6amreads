@@ -1,5 +1,6 @@
 const https = require('https');
 const { feedbackSignature } = require('../lib/emailFeedbackCrypto');
+const { getEmailLabels } = require('../lib/languages');
 
 /**
  * @typedef {Object} NewsItemEmail
@@ -17,13 +18,15 @@ const { feedbackSignature } = require('../lib/emailFeedbackCrypto');
  * @param {string} opts.userId - UUID for feedback links
  * @param {string} opts.lesson - Plain text lesson (paragraphs separated by newlines)
  * @param {NewsItemEmail[]} opts.newsItems
+ * @param {string} [opts.language='en'] - Language code for email labels
  */
 async function sendDailyEmail(opts) {
-  const { toEmail, displayName, userId, lesson, newsItems } = opts;
+  const { toEmail, displayName, userId, lesson, newsItems, language = 'en' } = opts;
+  const labels = getEmailLabels(language);
 
   const subject = `6amreads — ${formatDate()}`;
-  const html = buildEmailHtml({ displayName, userId, lesson, newsItems });
-  const text = buildEmailText({ displayName, lesson, newsItems });
+  const html = buildEmailHtml({ displayName, userId, lesson, newsItems, labels });
+  const text = buildEmailText({ displayName, lesson, newsItems, labels });
 
   const body = JSON.stringify({
     personalizations: [{ to: [{ email: toEmail }] }],
@@ -109,7 +112,8 @@ function logoBlock() {
   </table>`;
 }
 
-function buildEmailHtml({ displayName, userId, lesson, newsItems }) {
+function buildEmailHtml({ displayName, userId, lesson, newsItems, labels }) {
+  const L = labels || getEmailLabels('en');
   const name = escapeHtml(displayName || 'there');
   const lessonHtml = escapeHtml(lesson)
     .split(/\n+/)
@@ -140,7 +144,7 @@ function buildEmailHtml({ displayName, userId, lesson, newsItems }) {
       </tr>
       <tr>
         <td style="padding-top:8px;">
-          <a href="${escapeAttr(item.url)}" style="font-family:system-ui,sans-serif; font-size:13px; color:#8b6914;">Read full article →</a>
+          <a href="${escapeAttr(item.url)}" style="font-family:system-ui,sans-serif; font-size:13px; color:#8b6914;">${escapeHtml(L.readFullArticle)}</a>
         </td>
       </tr>
     </table>
@@ -175,7 +179,7 @@ function buildEmailHtml({ displayName, userId, lesson, newsItems }) {
           </tr>
           <tr>
             <td style="padding:28px 28px 8px; font-family:Georgia,serif;">
-              <p style="margin:0; font-size:20px; color:#1a1510;">Good morning, ${name}</p>
+              <p style="margin:0; font-size:20px; color:#1a1510;">${escapeHtml(L.greeting)}, ${name}</p>
               <p style="margin:8px 0 0; font-size:14px; color:#6b5c4d; font-family:system-ui,sans-serif;">${escapeHtml(formatDate())}</p>
             </td>
           </tr>
@@ -188,7 +192,7 @@ function buildEmailHtml({ displayName, userId, lesson, newsItems }) {
 
           <tr>
             <td style="padding:20px 28px 8px;">
-              <p style="margin:0; font-family:system-ui,sans-serif; font-size:11px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:#8b6914;">Section 1 · Your daily lesson</p>
+              <p style="margin:0; font-family:system-ui,sans-serif; font-size:11px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:#8b6914;">Section 1 · ${escapeHtml(L.section1)}</p>
             </td>
           </tr>
           <tr>
@@ -205,8 +209,8 @@ function buildEmailHtml({ displayName, userId, lesson, newsItems }) {
 
           <tr>
             <td style="padding:24px 28px 8px;">
-              <p style="margin:0; font-family:system-ui,sans-serif; font-size:11px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:#8b6914;">Section 2 · Today&apos;s news</p>
-              <p style="margin:8px 0 0; font-size:14px; color:#5c4d3d; font-family:system-ui,sans-serif; line-height:1.5;">Neutral summaries tailored to your interests. Tap a headline to read the full story.</p>
+              <p style="margin:0; font-family:system-ui,sans-serif; font-size:11px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:#8b6914;">Section 2 · ${escapeHtml(L.section2)}</p>
+              <p style="margin:8px 0 0; font-size:14px; color:#5c4d3d; font-family:system-ui,sans-serif; line-height:1.5;">${escapeHtml(L.section2Desc)}</p>
             </td>
           </tr>
           <tr>
@@ -223,15 +227,15 @@ function buildEmailHtml({ displayName, userId, lesson, newsItems }) {
 
           <tr>
             <td style="padding:24px 28px;">
-              <p style="margin:0; font-family:system-ui,sans-serif; font-size:11px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:#8b6914;">Section 3 · Shape tomorrow&apos;s paper</p>
-              <p style="margin:10px 0 16px; font-size:14px; color:#3d3429; font-family:system-ui,sans-serif; line-height:1.55;">One tap — we&apos;ll fold this into your profile for the next edition.</p>
+              <p style="margin:0; font-family:system-ui,sans-serif; font-size:11px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:#8b6914;">Section 3 · ${escapeHtml(L.section3)}</p>
+              <p style="margin:10px 0 16px; font-size:14px; color:#3d3429; font-family:system-ui,sans-serif; line-height:1.55;">${escapeHtml(L.section3Desc)}</p>
               <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
                 <tr>
                   <td style="padding-right:12px;">
-                    <a href="${escapeAttr(moreUrl)}" style="display:inline-block; background:#1a1510; color:#fdfbf7; font-family:system-ui,sans-serif; font-size:14px; font-weight:600; text-decoration:none; padding:12px 22px; border-radius:999px;">More like this</a>
+                    <a href="${escapeAttr(moreUrl)}" style="display:inline-block; background:#1a1510; color:#fdfbf7; font-family:system-ui,sans-serif; font-size:14px; font-weight:600; text-decoration:none; padding:12px 22px; border-radius:999px;">${escapeHtml(L.moreLikeThis)}</a>
                   </td>
                   <td>
-                    <a href="${escapeAttr(lessUrl)}" style="display:inline-block; background:#fdfbf7; color:#1a1510; font-family:system-ui,sans-serif; font-size:14px; font-weight:600; text-decoration:none; padding:12px 22px; border-radius:999px; border:2px solid #1a1510;">Less like this</a>
+                    <a href="${escapeAttr(lessUrl)}" style="display:inline-block; background:#fdfbf7; color:#1a1510; font-family:system-ui,sans-serif; font-size:14px; font-weight:600; text-decoration:none; padding:12px 22px; border-radius:999px; border:2px solid #1a1510;">${escapeHtml(L.lessLikeThis)}</a>
                   </td>
                 </tr>
               </table>
@@ -241,7 +245,7 @@ function buildEmailHtml({ displayName, userId, lesson, newsItems }) {
           <tr>
             <td style="padding:0 28px 32px;">
               <div style="background:#f7f0e6; border-radius:10px; padding:20px 22px; border:1px solid #e8dfc8;">
-                <p style="margin:0; font-family:system-ui,sans-serif; font-size:11px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:#6b5c4d;">Section 4 · Sources</p>
+                <p style="margin:0; font-family:system-ui,sans-serif; font-size:11px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:#6b5c4d;">Section 4 · ${escapeHtml(L.section4)}</p>
                 <ul style="margin:12px 0 0; padding-left:18px; color:#3d3429;">
                   ${sourcesList}
                   <li style="margin:0 0 8px; font-size:13px;">Personalized lesson generated with <a href="https://www.anthropic.com" style="color:#8b6914;">Anthropic Claude</a></li>
@@ -254,8 +258,8 @@ function buildEmailHtml({ displayName, userId, lesson, newsItems }) {
           <tr>
             <td style="padding:16px 28px 28px; text-align:center;">
               <p style="margin:0; font-size:12px; color:#9a8b7a; font-family:system-ui,sans-serif; line-height:1.6;">
-                You receive 6amreads because you signed up at 6amreads.com.<br/>
-                Prefer the web? Open your <a href="${escapeAttr(process.env.APP_URL || 'https://6amreads.com')}/dashboard" style="color:#8b6914;">dashboard</a>.
+                ${escapeHtml(L.footer)}<br/>
+                ${escapeHtml(L.footer2 || 'Prefer the web? Open your')} <a href="${escapeAttr(process.env.APP_URL || 'https://6amreads.com')}/dashboard" style="color:#8b6914;">${escapeHtml(L.dashboard)}</a>.
               </p>
             </td>
           </tr>
@@ -267,7 +271,8 @@ function buildEmailHtml({ displayName, userId, lesson, newsItems }) {
 </html>`;
 }
 
-function buildEmailText({ displayName, lesson, newsItems }) {
+function buildEmailText({ displayName, lesson, newsItems, labels }) {
+  const L = labels || getEmailLabels('en');
   const name = displayName || 'there';
   let news = '';
   (newsItems || []).forEach((item, i) => {
@@ -285,21 +290,21 @@ function buildEmailText({ displayName, lesson, newsItems }) {
   return `6AMREADS — ${formatDate()}
 ${'='.repeat(52)}
 
-Good morning, ${name}
+${L.greeting}, ${name}
 
-SECTION 1 — YOUR DAILY LESSON
+SECTION 1 — ${L.section1.toUpperCase()}
 ${'-'.repeat(36)}
 ${lesson}
 
-SECTION 2 — TODAY'S NEWS
+SECTION 2 — ${L.section2.toUpperCase()}
 ${'-'.repeat(36)}
-${news || '(No articles this morning.)'}
+${news || (L.noHeadlines || '(No articles this morning.)')}
 
 SECTION 3 — FEEDBACK
 ${'-'.repeat(36)}
-Reply from the HTML email using "More like this" / "Less like this", or update preferences in your dashboard.
+${L.moreLikeThis} / ${L.lessLikeThis} — ${L.section3Desc}
 
-SECTION 4 — SOURCES
+SECTION 4 — ${L.section4.toUpperCase()}
 ${'-'.repeat(36)}
 ${sources}
 • Lesson: Anthropic Claude

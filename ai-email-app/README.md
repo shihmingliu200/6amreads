@@ -78,6 +78,7 @@ Set **`PUBLIC_API_URL`** to your API’s public base URL so feedback links in em
 ```bash
 psql "$DATABASE_URL" -f api/migrations/001_init.sql
 psql "$DATABASE_URL" -f api/migrations/002_user_prefs_engagement.sql
+psql "$DATABASE_URL" -f api/migrations/003_user_language.sql
 ```
 
 **Option B: Local PostgreSQL or Railway**
@@ -85,6 +86,7 @@ psql "$DATABASE_URL" -f api/migrations/002_user_prefs_engagement.sql
 ```bash
 psql $DATABASE_URL -f api/migrations/001_init.sql
 psql $DATABASE_URL -f api/migrations/002_user_prefs_engagement.sql
+psql $DATABASE_URL -f api/migrations/003_user_language.sql
 ```
 
 ### 2. Start the API

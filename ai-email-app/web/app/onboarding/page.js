@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Logo from '@/components/Logo';
+import LanguagePicker from '@/components/LanguagePicker';
 import { API_URL, fetchProfile, onboardingComplete } from '@/lib/api';
 
 const QUESTIONS = [
@@ -63,6 +64,7 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(0);
   const [phase, setPhase] = useState('questions');
   const [form, setForm] = useState({
+    language: 'en',
     age: '',
     hobbies: '',
     position: '',
@@ -198,7 +200,17 @@ export default function OnboardingPage() {
         </Link>
 
         <p className="mt-8 text-xs font-medium uppercase tracking-[0.2em] text-accent">Onboarding</p>
-        <h1 className="mt-2 font-serif text-2xl font-semibold text-ink-900 md:text-3xl">{q.label}</h1>
+        <label className="mt-4 block">
+          <span className="text-xs font-medium uppercase tracking-wider text-ink-700">Language for your daily email</span>
+          <div className="mt-1.5">
+            <LanguagePicker
+              value={form.language}
+              onChange={(v) => setForm({ ...form, language: v })}
+              className="w-full rounded-lg border border-cream-300 bg-white px-3 py-2.5 text-sm text-ink-900 outline-none ring-accent/30 transition focus:border-accent focus:ring-2"
+            />
+          </div>
+        </label>
+        <h1 className="mt-6 font-serif text-2xl font-semibold text-ink-900 md:text-3xl">{q.label}</h1>
         {q.hint && <p className="mt-2 text-sm text-ink-700">{q.hint}</p>}
 
         <div className="mt-8">
